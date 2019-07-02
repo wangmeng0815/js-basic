@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    
+    <title>Document</title>
+</head>
+<body>
+    <script src='./index.js'></script>
+    <script>
+        function fn1(resolve, reject) {
+            console.log('步骤一：执行');
+            resolve('1');
+            console.log('5')
+            setTimeout(function() {
+                console.log('2')
+            }, 0);
+        }
+
+        function fn2(resolve, reject) {
+            console.log('步骤二：执行');
+            resolve('3')
+            setTimeout(function() {
+                console.log('4');
+            }, 1000);
+        }
+
+        var p = new Promise(fn1).then(function(val) {
+            console.log(val);
+            return new Promise(fn2);
+        }).then(function(val) {
+            console.log(val);
+            return 33;
+        }).then(function(val) {
+            console.log(val);
+        });
+    </script>
+</body>
+</html>
