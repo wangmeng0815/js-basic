@@ -1,150 +1,119 @@
 /*
-* 手写 Promise 待完善
+* 手写 Promise 简易版 
 */
-var PENDING = 'pending',
-    RESOLVED = 'resolved',
-    REJECTED = 'rejected';
-function Promise(executor){
-    if(executor && typeof executor != 'function'){
-        throw new Error('Promise is not a function');
-    }
-    
+const PENDING = 'pending';
+const FULFILLED = 'fulfilled';
+const REJECTED = 'rejected';
+
+function Promise(fn){
+
+    if(!(this instanceof Promise)) return new Promise(fn);
+
     var promise = this;
-    promise._resolvedCallbacks = [];
-    promise._rejectedCallBacks = [];
-    promise._status = PENDING;
-    promise._reason = null;
-    promise._value = null;
-
+    promise._resolves = [];
+    promise._rejects = [];
+    promise._status = PENDING;  // 每个promise必须有且只有一个状态 只能从pending -> fulfilled 或者 pending -> rejected
+    promise._data = null;
     function resolve(value){
-        if(promise._status === PENDING){
-            setTimeout(function(){
-                promise._status = RESOLVED;
-                promise._value = value;
-                promise._resolvedCallbacks.forEach(function(callback){
-                    callback(value);
-                })
-            }, 0)
-        }
+        // * 假如传入的是不包含异步操作的函数，resolve就会先于 then 执行，也就是说 promise._resolves 是一个空数组。
+        process.nextTick(function(){
+            promise._status = FULFILLED;
+            promise._data = value;
+            promise._resolves.forEach(function(callback){
+                callback(value)
+            })
+        })
     }
 
-    function reject(value){
-        if(promise._status === PENDING){
-            setTimeout(function(){
-                promise._status = REJECTED;
-                promise._reason = value;
-                promise._rejectedCallBacks.forEach(function(callback){
-                    callback(value);
-                })
-            }, 0)
-        }
+    function reject(reason){
+        process.nextTick(function(){
+            promise._status = REJECTED;
+            promise._data = reason;
+            promise._rejects.forEach(function(callback){
+                callback(reason);
+            })
+        })
     }
 
     try{
-        executor(resolve, reject);      
-    }catch(e){ // 如果捕获发生异常，直接调失败，并把参数穿进去
+        fn(resolve, reject);
+    } catch(e){
         reject(e);
     }
 }
 
-Promise.prototype.then = function(onFulfilled,onRejected) {
-    onFulfilled = typeof onFulfilled === 'function' ? onFulfilled : function(value) {return value};
-    onRejected = typeof onRejected === 'function' ? onRejected : function(err) {throw err};
-　　 //这里正好解释了在正式的Promise函数中，我们为什么可以不写onRejected函数，
-　　 //因为then方法内部会帮我们封装好一个onRejected函数，用来抛出上一次then或Promise执行出错的信息，这也是为什么可以在最后执行catch方法的原因
+// 重点
+Promise.prototype.then = function(onFulfilled, onRejected){
+    var promise = this;
+    onFulfilled = typeof onFulfilled === 'function' 
+                ? onFulfilled 
+                : function (value) {return value};
 
-    let _this = this;//缓存this，保不齐后面会用到，当然如果你不想缓存this，也可以在后面使用箭头函数
-    let promise2;
-    if (_this._status === RESOLVED) {
-        promise2 = new Promise(function(resolve,reject) {
-            try {
-                //onFulfilled函数的执行情况要考虑多种情况，后面会细说
-                let x = onFulfilled(_this.value);//将执行onFulfilled的返回值传给x，这里需要注意的是执行过程中有可能会出错
-                resolvePromise(promise2,x,resolve,reject);
-            } catch(e) {
-                reject(e);
+    // * 这里注意 必须throw出去 不然下一个then 仍然会接收到 值
+    onRejected = typeof onRejected === 'function' 
+                ? onRejected 
+                : function (reason) {throw reason}; 
+    // // * 链式调用 为什么不能返回this 而必须要新建一个promise 因为每个promise的状态是唯一的 一旦变更 不可再修改
+    return new Promise(function(resolve, reject){
+        function handle(value){
+            var ret = onFulfilled(value);
+            // * 这里需要注意 为了then里面的函数能够对promise对象进行处理
+            if(ret && typeof ret['then'] == 'function'){
+                // 如果是promise对象， 则调用then方法 形成一个嵌套，直到不是promise对象为止
+                ret.then(resolve, reject);
+            }else{
+                resolve(ret);
             }
-        })
-        
-    }
-    if (_this._status === REJECTED) {
-        promise2 = new Promise(function(resolve,reject) {
-            try {
-                //onFulfilled函数的执行情况要考虑多种情况，后面会细说
-                let x = onRejected(_this.reason);//将执行onFulfilled的返回值传给x(即这次then函数执行的返回值)，这里需要注意的是执行过程中有可能会出错
-                resolvePromise(promise2,x,resolve,reject);//这个x会被下一次的then函数接收到
-            } catch(e) {
-                reject(e);
-            }
-        })
-        
-    }
-
-    if(_this._status === PENDING){
-        promise2 = new Promise(function(resolve,reject) {
-        // 每一次then时，如果是等待态，就把回调函数push进数组中，什么时候改变状态什么时候再执行
-            _this._resolvedCallbacks.push(function(){ // 这里用一个函数包起来，是为了后面加入新的逻辑进去
-                try {
-                    let x = onFulfilled(_this.value);
-                    resolvePromise(promise2,x,resolve,reject);
-                } catch(e) {
-                    reject(e);
-                }
-            })
-            _this._rejectedCallbacks.push(function(){ // 同理
-                try {
-                    let x = onRejected(_this.reason);
-                    resolvePromise(promise2,x,resolve,reject);
-                } catch(e) {
-                    reject(e);
-                }
-            })
-        })
-        
-    }
-    return promise2;
-}
-
-
-function resolvePromise(promise2, x, resolve, reject){
-    // 接受四个参数： 新的primise、返回值、成功和失败的回调
-    // 有可能这里返回的x是别人的promise
-    // 尽可能允许其他乱写
-    if(promise2 === x ){
-        return reject(new TypeError('循环引用了'));
-    }
-    // 看x是不是一个promise, promise应该是一个对象
-    let called  = false;
-    // 下面判断上一次then返回的是普通值还是函数，
-    if(x != null && (typeof x === 'object' || typeof x === 'function')){
-        // 可能是promise {}, 看这个对象中是否有then方法，如果有then就认为他是promise了。。。 《你不知道的js》中，有提到鸭子方法
-        try{
-            let then = x.then; // 保存一下 x的then方法
-
-            if(typeof then === 'function'){
-                // 成功
-                // 用call方法修改指针为x，否则this指向window
-                then.call(x, function(y){ // 如果x是一个Promise对象，y参数表示执行后的resolve值
-                    if(called) return // 如果调用过，就return掉
-                    called = true;
-                    // y可能还是一个promise，再去解析知道返回的是一个普通值
-                    resolvePromise(promise2, y, resolve, reject);  // 递归调用 解决了问题
-                }, function (err){  // 失败时执行的函数
-                    if(called) return;
-                    called = true;
-                    console.log('r');
-                    reject(err);
-                })
-            }else { // 如果x不是一个Promise对象，则直接resolve(x)
-                resolve(x);
-            }
-        }catch(e){
-            if(called) return ;
-            called = true;
-            reject(e);
         }
-    }else{ // 说明是一个普通值
-        resolve(x); // 表示成功了
-    }
-    // resolve(x);
+
+        function errback(reason){
+            var reason = onRejected(reason);
+            if(reason && typeof reason['then'] == 'function'){
+                // 如果是promise对象， 则调用then方法 形成一个嵌套，直到不是promise对象为止
+                ret.then(resolve, reject);
+            }else{
+                resolve(reason);
+            }
+        }
+        // * 需要注意的是 这里的promise 指向的是上一个promise对象 ，而不是刚刚新建的这个promise对象
+        if(promise._status == PENDING){
+            promise._resolves.push(handle);
+            promise._rejects.push(errback);
+        }else if(promise._status == FULFILLED){
+            handle(promise._data);
+        }else{
+            errback(promise._data);
+        }
+    })
 }
+
+// test 
+function fn1(resolve, reject) {
+    console.log('步骤一：执行');
+    resolve('1');
+    console.log('5')
+    setTimeout(function() {
+        console.log('2')
+    }, 0);
+}
+
+function fn2(resolve, reject) {
+    console.log('步骤二：执行');
+    // resolve('3');
+    reject('3');
+    setTimeout(function() {
+        console.log('4');
+    }, 1000);
+}
+
+new Promise(fn1).then(function(val) {
+    console.log(val);
+    return new Promise(fn2);
+}).then(function(val) {
+    console.log('then1', val);
+    return 33;
+}, function(err){
+    console.log('这是err', err);
+}).then(function(val) {
+    console.log('then2',val);
+});
