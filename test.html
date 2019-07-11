@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>测试页面</title>
+</head>
+<body>
+    <script>
+        function deepClone(data){
+            if(!data | !(typeof data === 'object') | (typeof data === 'function')){
+                return data || undefined;
+            }
+
+            var constructor = data.constructor;
+            var result = new constructor();
+
+            for(var key in data){
+                if(data.hasOwnProperty(key)){
+                    result[key] = deepClone(data[key]);
+                }
+            }
+            return result;
+        }
+
+        var test = {
+            a: 1,
+            b: function(){
+                console.log(123);
+            },
+            c: {
+                c1: 4,
+                c2: function(){
+                    console.log(1);
+                }
+            },
+        }
+
+        var temp = deepClone(test);
+        console.log(temp);
+    </script>
+</body>
+</html>

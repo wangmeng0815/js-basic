@@ -1,13 +1,13 @@
 /**
  * 手写 call 实现
  */
-var foo = {
+var bar = {
     value: 1
 }
-function bar(){
+function foo(){
     console.log(this.value);
 }
-bar.call(foo);
+foo.call(bar);
 // >>>
 // var foo = {
 //     value: 1,
