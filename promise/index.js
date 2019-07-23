@@ -1,6 +1,7 @@
-/*
-* 手写 Promise 简易版 
-*/
+/**
+ * 手写 Promise 简易版 
+ * node index.js 执行
+ */
 const PENDING = 'pending';
 const FULFILLED = 'fulfilled';
 const REJECTED = 'rejected';

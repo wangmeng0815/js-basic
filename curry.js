@@ -4,6 +4,11 @@ function square(n){
     return n*n;
 }
 
+/**
+ * flow函数又称为 compose函数 也是组合函数 是函数式编程的一种重要函数
+ * 
+ */
+
 var flow = function(funcs){
     var length = funcs.length;
     var index = length;
