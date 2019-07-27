@@ -1,20 +1,64 @@
 /**
- * 关于深拷贝 需要注意的知识点
- * object.assign() 对象只有一层深度时才可使用 算是浅拷贝的升级版
- * 转换成json再转回来 的弊端 1.破坏了constructor，生成的只能是object；2.只能用在单纯的只有数据的对象 function引用丢失
+ * 深拷贝 
+ * 目前待完善的地方是 关于function的
  */
+function type(obj) {
+    var toString = Object.prototype.toString;
+    var map = {
+        '[object Boolean]': 'boolean',
+        '[object Number]': 'number',
+        '[object String]': 'string',
+        '[object Function]': 'function',
+        '[object Array]': 'array',
+        '[object Date]': 'date',
+        '[object Regexp]': 'regExp',
+        '[object Undefined]': 'undefined',
+        '[object Null]': 'null',
+        '[object Object]': 'object',
+    };
+    return map[toString.call(obj)];
+}
 
-function deepClone(data){
-    if(!data | !(data instanceof Object) | (typeof data === 'function')){
-        return data || undefined;
+function deepClone(data) {
+    var t = type(data), o, i, ni;
+
+    if (t === 'array') {
+        o = [];
+    } else if (t === 'object') {
+        o = {};
+    } else {
+        return data;
     }
 
-    var constructor = data.constructor;
-    var result = new constructor();
+    if (t === 'array') {
+        for (i = 0, ni = data.length; i < ni; i++) {
+            o.push(deepClone(data[i]))
+        }
+        return o;
+    } else if (t === 'object') {
+        for (var key in data) {
+            if (data.hasOwnProperty(key)) {
+                o[key] = deepClone(data[key]);
+            }
+        }
+        return o;
+    }
+}
 
-    for(var key in data){
-        if(data.hasOwnProperty(key)){
+/**
+ * 另一种更容易理解
+ * @param {*} data 
+ */
+function deepClone2(data) {
+    if (!data | !(data instanceof Object) | (typeof data == 'function')) {
+        return data || undefined;
+    }
+    var constructor = data.contructor;
+    var result = new constructor();
+    for (var key in data) {
+        if (data.hasOwnProperty(key)) {
             result[key] = deepClone(data[key]);
         }
     }
+    return result;
 }
