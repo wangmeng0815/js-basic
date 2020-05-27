@@ -17,7 +17,7 @@
          for(var i = 0, len = arr.length; i < len; i++){
              args.push(`arr[${i}]`);
          }
-         result = eval(`context.fn(${args})`);
+         result = eval(`context.fn(${args.join(',')})`);
      }
      delete context.fn;
      return result;

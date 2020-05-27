@@ -30,7 +30,7 @@ Function.prototype.call2 = function(context){
     for(var i = 1, len = arguments.length; i < len; i++){
         args.push(`arguments[${i}]`);
     }
-    var result = eval(`context.fn(${args})`);
+    var result = eval(`context.fn(${args.join(',')})`);
     delete context.fn;
     return result;
 }

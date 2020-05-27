@@ -45,20 +45,48 @@ function deepClone(data) {
     }
 }
 
-/**
- * 另一种更容易理解
- * @param {*} data 
- */
-function deepClone2(data) {
-    if (!data | !(data instanceof Object) | (typeof data == 'function')) {
-        return data || undefined;
-    }
-    var constructor = data.contructor;
-    var result = new constructor();
-    for (var key in data) {
-        if (data.hasOwnProperty(key)) {
-            result[key] = deepClone(data[key]);
+function deepClone3 (data){
+    let result;
+    if(typeof data !== 'object'){
+        result = data;
+    } else {
+        if(Array.isArray(data)){
+            result = [...data]
+        } else if(data === null){
+            result = null
+        } else if(data.constructor === RegExp) {
+            result = data;
+        } else {
+            result = {};
+            for(let key in data){
+                if(data.hasOwnProperty(key)){
+                    result[key] = deepClone(data[key])
+                }
+            }
         }
     }
+
     return result;
 }
+
+let obj1 = {
+    a: {
+        c: /a/,
+        d: undefined,
+        b: null
+    },
+    b: function () {
+        console.log(this.a)
+    },
+    c: [
+        {
+            a: 'c',
+            b: /b/,
+            c: undefined
+        },
+        'a',
+        3
+    ]
+}
+let obj2 = deepClone(obj1);
+    console.log(obj2);

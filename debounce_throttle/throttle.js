@@ -3,19 +3,16 @@
  * 在一段连续操作中，每段时间只执行一次，频率较高的事件中使用 来提高性能
  */
 
-/**
- * 利用settimeout来实现 函数节流
- * @param {*} func 执行的方法
- * @param {*} wait 间隔的时间
- */
-function basicThrottle(fn, wait){
-    let timer;
-    return () => {
-        if(timer) return;
-        timer = setTimeout( () =>{
-            fn();
+function throttle(fn, delay = 100) {
+    //首先设定一个变量，在没有执行我们的定时器时为null
+    let timer = null;
+    return function () {
+        //当我们发现这个定时器存在时，则表示定时器已经在运行中，需要返回
+        if (timer) return;
+        timer = setTimeout(() => {
+            fn.apply(this, arguments);
             timer = null;
-        }, wait);
+        }, delay);
     }
 }
 
@@ -34,3 +31,16 @@ function throttle(fn, wait){
         }
     }
 }
+
+// 需要被节流的 函数
+function scrollHandler (arg) {
+    console.log(`${arg}--被执行了`);
+}
+// 节流限制： 每 1000 毫秒执行一次
+const throttleFunc = throttle(scrollHandler, 10000);
+let i = 0;
+// 模拟 页面滚动事件
+setInterval(() => {
+    console.log(`${i} --- 进来了，但是不知道有没有执行`);
+    throttleFunc(i++);
+}, 1000);
